@@ -69,3 +69,4 @@ iOSInjectionProject/
 *.cache
 /AutoPalBot/obj
 /AutoPalBot/bin
+/.vs

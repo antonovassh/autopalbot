@@ -3,7 +3,12 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33627.172
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoPalBot", "AutoPalBot\AutoPalBot.csproj", "{D4064621-2897-4FB5-83C9-2D6A2056183F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoPalBot", "AutoPalBot\AutoPalBot.csproj", "{D4064621-2897-4FB5-83C9-2D6A2056183F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D0C2AAAB-D95E-4F56-BB56-13C8D668233A}"
+	ProjectSection(SolutionItems) = preProject
+		Dockerfile.txt = Dockerfile.txt
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

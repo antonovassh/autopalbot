@@ -1,0 +1,22 @@
+# Use the official .NET Core runtime as a parent image
+FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
+WORKDIR /AutoPalBot
+
+# Use the .NET SDK to build the app
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+WORKDIR /src
+COPY ["autopalbot/AutoPalBot.csproj", "AutoPalBot/"]
+RUN dotnet restore "AutoPalBot/AutoPalBot.csproj"
+COPY . .
+WORKDIR "/src/AutoPalBot"
+RUN dotnet build "AutoPalBot.csproj" -c Release -o /app/build
+
+# Publish the app
+FROM build AS publish
+RUN dotnet publish "AutoPalBot.csproj" -c Release -o /app/publish
+
+# Build the runtime image
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "AutoPalBot.dll"]
