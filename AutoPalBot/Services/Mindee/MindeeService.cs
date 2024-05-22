@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 using AutoPalBot.Models;
 
-namespace AutoPalBot.Services;
+namespace AutoPalBot.Services.Mindee;
 
 public static class MindeeService
 {
