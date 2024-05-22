@@ -14,10 +14,10 @@ public class Bot
     public static async Task Main(string[] args)
     {
         // Настройка служб
-        string apiKey = "key";
+        string apik = "key";
 
         var services = new ServiceCollection()
-            .AddSingleton<IOpenAIService>(new OpenAIService(apiKey))
+            .AddSingleton<IOpenAIService>(new OpenAIService(apik))
             .AddSingleton<IBotService, BotService>()
             .BuildServiceProvider();
 
