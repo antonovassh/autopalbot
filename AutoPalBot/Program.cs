@@ -6,118 +6,54 @@ using Telegram.Bot.Types.Enums;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using AutoPalBot.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 public class Bot
 {
-    private enum BotState
-    {
-        AwaitingPassportNumber,
-        AwaitingVehicleNumber,
-        ConfirmingDetails,
-        AwaitingPriceConfirmation
-    }
-
-    private static BotState _currentState = BotState.AwaitingPassportNumber;
-
-    private static string _userPassportNumber;
-    private static string _userVehicleNumber;
-
     public static async Task Main(string[] args)
     {
+        // Настройка служб
+        var services = new ServiceCollection()
+            .AddSingleton<IBotService, BotService>()
+            .BuildServiceProvider();
+
+        var botService = services.GetRequiredService<IBotService>();
+
+        // Инициализация Telegram Bot Client
         var botClient = new TelegramBotClient("6984681761:AAHSmqsAG-twvGG5GtX8loYCBIPpcos20LU");
 
         using var cts = new CancellationTokenSource();
 
-        // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
+        // Определение параметров для получения обновлений
+        var receiverOptions = new ReceiverOptions
+        {
+            AllowedUpdates = Array.Empty<UpdateType>()
+        };
+
+        // Запуск получения обновлений
         botClient.StartReceiving(
-            HandleUpdateAsync,
-            HandleErrorAsync,
-            new ReceiverOptions
-            {
-                AllowedUpdates = Array.Empty<UpdateType>() // receive all update types
-            },
+            updateHandler: (client, update, token) => HandleUpdateAsync(client, update, token, botService),
+            pollingErrorHandler: HandleErrorAsync,
+            receiverOptions: receiverOptions,
             cancellationToken: cts.Token
         );
 
+        // Получение информации о боте
         var me = await botClient.GetMeAsync();
         Console.WriteLine($"Start listening for @{me.Username}");
         Console.ReadLine();
 
-        // Send cancellation request to stop bot
+        // Отмена получения обновлений
         cts.Cancel();
     }
 
-    private static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
+    // Обработчик обновлений
+    private static async Task HandleUpdateAsync(ITelegramBotClient client, Update update, CancellationToken token, IBotService botService)
     {
-        if (update.Message is not { } message)
-            return;
-        if (message.Text is not { } messageText)
-            return;
-
-        var chatId = message.Chat.Id;
-
-        switch (_currentState)
-        {
-            case BotState.AwaitingPassportNumber:
-                await HandlePassportNumberAsync(botClient, chatId, messageText);
-                break;
-            case BotState.AwaitingVehicleNumber:
-                await HandleVehicleNumberAsync(botClient, chatId, messageText);
-                break;
-            case BotState.ConfirmingDetails:
-                await HandleConfirmationAsync(botClient, chatId, messageText);
-                break;
-            case BotState.AwaitingPriceConfirmation:
-                await HandlePriceConfirmationAsync(botClient, chatId, messageText);
-                break;
-        }
+        await botService.HandleUpdateAsync(client, update, token);
     }
 
-    private static async Task HandlePassportNumberAsync(ITelegramBotClient botClient, long chatId, string messageText)
-    {
-        _userPassportNumber = messageText;
-        _currentState = BotState.AwaitingVehicleNumber;
-        await botClient.SendTextMessageAsync(chatId, "Thank you! Now, please enter your vehicle identification number.");
-    }
-
-    private static async Task HandleVehicleNumberAsync(ITelegramBotClient botClient, long chatId, string messageText)
-    {
-        _userVehicleNumber = messageText;
-        _currentState = BotState.ConfirmingDetails;
-
-        var confirmationMessage = $"Please confirm your details:\nPassport Number: {_userPassportNumber}\nVehicle Identification Number: {_userVehicleNumber}\nIs this information correct? (yes/no)";
-        await botClient.SendTextMessageAsync(chatId, confirmationMessage);
-    }
-
-    private static async Task HandleConfirmationAsync(ITelegramBotClient botClient, long chatId, string messageText)
-    {
-        if (messageText.ToLower() == "yes")
-        {
-            _currentState = BotState.AwaitingPriceConfirmation;
-            await botClient.SendTextMessageAsync(chatId, "The fixed price for the insurance is 100 USD. Do you agree? (yes/no)");
-        }
-        else if (messageText.ToLower() == "no")
-        {
-            _currentState = BotState.AwaitingPassportNumber;
-            _userPassportNumber = null;
-            _userVehicleNumber = null;
-            await botClient.SendTextMessageAsync(chatId, "Let's try again. Please enter your passport number.");
-        }
-    }
-
-    private static async Task HandlePriceConfirmationAsync(ITelegramBotClient botClient, long chatId, string messageText)
-    {
-        if (messageText.ToLower() == "yes")
-        {
-            var policyDocument = await OpenAIService.GeneratePolicyDocument(_userPassportNumber);// _userVehicleNumber);
-            await botClient.SendTextMessageAsync(chatId, $"Thank you! Here is your insurance policy:\n{policyDocument}");
-        }
-        else if (messageText.ToLower() == "no")
-        {
-            await botClient.SendTextMessageAsync(chatId, "We apologize, but the price is fixed at 100 USD.");
-        }
-    }
-
+    // Обработчик ошибок
     private static Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
     {
         var errorMessage = exception switch
@@ -131,3 +67,29 @@ public class Bot
         return Task.CompletedTask;
     }
 }
+
+//if (messageText.ToLower() == "/start")
+//{
+//    await botClient.SendTextMessageAsync(chatId, "Welcome! I am your Car Insurance Bot. Please send a photo of your passport.");
+//    return;
+//}
+
+//if (message.Photo != null)
+//{
+//    var fileId = message.Photo.Last().FileId;
+//    var file = await botClient.GetFileAsync(fileId);
+
+//    using (var saveImageStream = new FileStream("temp.jpg", FileMode.Create))
+//    {
+//        await botClient.DownloadFileAsync(file.FilePath, saveImageStream);
+//    }
+
+//    var documentData = await MindeeService.ExtractDataAsync("temp.jpg");
+//    var documentDataText = JsonConvert.SerializeObject(documentData, Formatting.Indented);
+
+//    await botClient.SendTextMessageAsync(chatId, $"Extracted Data: {documentDataText}\nIs this information correct? (yes/no)");
+
+//    return;
+//}
+
+
