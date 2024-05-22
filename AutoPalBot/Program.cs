@@ -14,7 +14,7 @@ public class Bot
     public static async Task Main(string[] args)
     {
         // Настройка служб
-        string apiKey = "sk-proj-lOIJDQLlxJZyoX7tW3WKT3BlbkFJIPZgzRZ4NliOBUqrQl2v";
+        string apiKey = "key";
 
         var services = new ServiceCollection()
             .AddSingleton<IOpenAIService>(new OpenAIService(apiKey))
