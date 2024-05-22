@@ -4,9 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AutoPalBot.Services.Mindee
+namespace AutoPalBot.Services.Mindee;
+
+public interface IMindeeService
 {
-    public interface IMindeeService
-    {
-    }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AutoPalBot.Models.OpenAI;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,5 +9,7 @@ namespace AutoPalBot.Services.OpenAI;
 
 public interface IOpenAIService
 {
-    Task<string> GenerateCarInsuranceDocument(string prompt);
+    public Task<string> GenerateText(TextGenerationRequestModel prompt);
+
+    public Task<HttpResponseMessage> HttpRawRequest(TextGenerationRequestModel prompt);
 }

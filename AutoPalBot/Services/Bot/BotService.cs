@@ -1,4 +1,5 @@
-﻿using AutoPalBot.Services.Mindee;
+﻿using AutoPalBot.Models.OpenAI;
+using AutoPalBot.Services.Mindee;
 using AutoPalBot.Services.OpenAI;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -89,8 +90,20 @@ public class BotService : IBotService
     {
         if (messageText.ToLower() == "yes")
         {
-            string prompt = $"Generate a car insurance document for passport number {_userPassportNumber} and vehicle number {_userVehicleNumber}.";
-            string document = await _openAIService.GenerateCarInsuranceDocument(prompt);     
+            var prompt = new TextGenerationRequestModel()
+            {
+                Model = "gpt-3.5-turbo",
+                messages = new List<TextGenerationMessageModel>() {
+                new TextGenerationMessageModel()
+                {
+                    Content = $"Generate a car insurance document for passport number {_userPassportNumber} and vehicle number {_userVehicleNumber}.",
+                    Role = "user"
+                },
+            }
+            };
+
+            var document = await _openAIService.GenerateText(prompt);
+              
             await botClient.SendTextMessageAsync(chatId, $"Thank you! Here is your insurance policy:\n{document}");
         }
         else if (messageText.ToLower() == "no")
