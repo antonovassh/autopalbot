@@ -9,5 +9,5 @@ namespace AutoPalBot.Models.OpenAI;
 
 public class OpenAIResponse
 {
-    public List<Choice> choices { get; set; }
+    public List<Choice> Choices { get; set; }
 }

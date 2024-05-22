@@ -11,32 +11,28 @@ namespace AutoPalBot.Services.OpenAI;
 
 public class OpenAIService : IOpenAIService
 {
-    private readonly string apiKey;
-    private readonly string apiUrl = "https://api.openai.com/v1/completions";
+    public const string apiKey = "sk-proj-fHWauI760cF2C2J5xk8FT3BlbkFJ1ZUMPwWkJFiMXM9k4nAQ";
 
-    public OpenAIService(string apiKey)
+
+    public async Task<HttpResponseMessage> HttpRawRequest(TextGenerationRequestModel prompt)
     {
-        this.apiKey = apiKey;
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/chat/completions");
+        string jsonContent = JsonConvert.SerializeObject(prompt);
+        request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+        return await client.SendAsync(request);
     }
 
-    public async Task<string> GenerateCarInsuranceDocument(string prompt)
+    public async Task<string> GenerateText(TextGenerationRequestModel prompt)
     {
-        var client = new RestClient(apiUrl);
-        var request = new RestRequest("/v1/completions", Method.Post);
+        HttpResponseMessage response = await HttpRawRequest(prompt);
 
-        request.AddHeader("Authorization", $"Bearer {apiKey}");
-        request.AddHeader("Content-Type", "application/json");
+        var responseContentJson = await response.Content.ReadAsStringAsync();
 
-        var openAIRequest = new OpenAIRequest { prompt = prompt };
-        request.AddJsonBody(openAIRequest);
+        return responseContentJson;
 
-        var response = await client.ExecuteAsync(request);
-        if (response.IsSuccessful)
-        {
-            var openAIResponse = JsonConvert.DeserializeObject<OpenAIResponse>(response.Content);
-            return openAIResponse.choices.FirstOrDefault()?.text.Trim();
-        }
-
-        throw new Exception("Error calling OpenAI API: " + response.ErrorMessage);
     }
 }

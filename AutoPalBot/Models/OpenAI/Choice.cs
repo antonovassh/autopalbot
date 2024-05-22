@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AutoPalBot.Models.OpenAI
+namespace AutoPalBot.Models.OpenAI;
+
+public class Choice
 {
-    public class Choice
-    {
-        public string text { get; set; }
-    }
+    public string Text { get; set; }
 }
