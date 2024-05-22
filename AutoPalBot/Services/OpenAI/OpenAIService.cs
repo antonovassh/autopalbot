@@ -26,13 +26,16 @@ public class OpenAIService : IOpenAIService
         return await client.SendAsync(request);
     }
 
-    public async Task<string> GenerateText(TextGenerationRequestModel prompt)
+    public async Task<Insuranse> GenerateText(TextGenerationRequestModel prompt)
     {
         HttpResponseMessage response = await HttpRawRequest(prompt);
 
         var responseContentJson = await response.Content.ReadAsStringAsync();
 
-        return responseContentJson;
+        var result = JsonConvert.DeserializeObject<GptResponseModel>(responseContentJson);
+        var insuranse = JsonConvert.DeserializeObject<Insuranse>(result!.Choices.First()!.Message.Content);
+
+        return insuranse;
 
     }
 }

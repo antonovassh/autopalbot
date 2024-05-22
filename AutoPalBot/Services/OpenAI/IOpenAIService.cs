@@ -9,7 +9,7 @@ namespace AutoPalBot.Services.OpenAI;
 
 public interface IOpenAIService
 {
-    public Task<string> GenerateText(TextGenerationRequestModel prompt);
+    public Task<Insuranse> GenerateText(TextGenerationRequestModel prompt);
 
     public Task<HttpResponseMessage> HttpRawRequest(TextGenerationRequestModel prompt);
 }

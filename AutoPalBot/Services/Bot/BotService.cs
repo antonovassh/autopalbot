@@ -1,4 +1,5 @@
 ﻿using AutoPalBot.Models.OpenAI;
+using AutoPalBot.Services.DocumentGenerator;
 using AutoPalBot.Services.Mindee;
 using AutoPalBot.Services.OpenAI;
 using Telegram.Bot;
@@ -9,10 +10,13 @@ namespace AutoPalBot.Services.Bot;
 public class BotService : IBotService
 {
     private readonly IOpenAIService _openAIService;
+    private readonly IDocumentService _documentService;
     //private readonly IMindeeService _mindeeService;
-    public BotService(IOpenAIService openAISerice) //, IMindeeService mindeeService)
+    public BotService(IOpenAIService openAISerice, IDocumentService documentService) //, IMindeeService mindeeService)
     {
         _openAIService = openAISerice;
+        _documentService = documentService;
+
         //_mindeeService = mindeeService;
     }
 
@@ -102,15 +106,23 @@ public class BotService : IBotService
             }
             };
 
-            var document = await _openAIService.GenerateText(prompt);
-              
-            await botClient.SendTextMessageAsync(chatId, $"Thank you! Here is your insurance policy:\n{document}");
+            var insuranse = await _openAIService.GenerateText(prompt);
+            Console.WriteLine(insuranse);
+           // _documentService.GenerateDocument(insuranse);
+
+            //sending document
+            using (var documentStream = System.IO.File.OpenRead(@"C:\Users\Олександра\Desktop\AutoPalBot"))
+            {
+                await botClient.SendDocumentAsync(chatId, new InputFileStream(documentStream, "HelloWorld.pdf"));
+
+
+            }
         }
         else if (messageText.ToLower() == "no")
         {
             await botClient.SendTextMessageAsync(chatId, "We apologize, but the price is fixed at 100 USD.");
         }
+        }
     }
-}
 
 

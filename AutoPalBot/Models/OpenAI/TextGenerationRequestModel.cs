@@ -5,15 +5,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AutoPalBot.Models.OpenAI
+namespace AutoPalBot.Models.OpenAI;
+
+public class TextGenerationRequestModel
 {
-    public class TextGenerationRequestModel
-    {
-        [JsonProperty("model")]
-        public string Model { get; set; }
+    [JsonProperty("model")]
+    public string Model { get; set; }
 
-        [JsonProperty("messages")]
-        public ICollection<TextGenerationMessageModel> messages { get; set; }
+    [JsonProperty("messages")]
+    public ICollection<TextGenerationMessageModel> messages { get; set; }
 
-    }
 }
