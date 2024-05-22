@@ -4,11 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AutoPalBot.Models
+namespace AutoPalBot.Models;
+
+public class DocumentData
 {
-    public class DocumentData
-    {
-        public string? PassportNumber { get; set; }
-        public string? VehicleIdentificationNumber { get; set; }
-    }
+    public string? PassportNumber { get; set; }
+    public string? VehicleIdentificationNumber { get; set; }
 }
