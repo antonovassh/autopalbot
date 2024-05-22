@@ -1,16 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Telegram.Bot.Exceptions;
-using Telegram.Bot.Types;
+﻿using AutoPalBot.Services.Mindee;
+using AutoPalBot.Services.OpenAI;
 using Telegram.Bot;
+using Telegram.Bot.Types;
 
-namespace AutoPalBot.Services;
+namespace AutoPalBot.Services.Bot;
 
 public class BotService : IBotService
 {
+    private readonly IOpenAIService _openAIService;
+    //private readonly IMindeeService _mindeeService;
+    public BotService(IOpenAIService openAISerice) //, IMindeeService mindeeService)
+    {
+        _openAIService = openAISerice;
+        //_mindeeService = mindeeService;
+    }
+
     private enum BotState
     {
         AwaitingPassportNumber,
@@ -85,8 +89,9 @@ public class BotService : IBotService
     {
         if (messageText.ToLower() == "yes")
         {
-            var policyDocument = await OpenAIService.GeneratePolicyDocument(_userPassportNumber);// _userVehicleNumber);
-            await botClient.SendTextMessageAsync(chatId, $"Thank you! Here is your insurance policy:\n{policyDocument}");
+            string prompt = $"Generate a car insurance document for passport number {_userPassportNumber} and vehicle number {_userVehicleNumber}.";
+            string document = await _openAIService.GenerateCarInsuranceDocument(prompt);     
+            await botClient.SendTextMessageAsync(chatId, $"Thank you! Here is your insurance policy:\n{document}");
         }
         else if (messageText.ToLower() == "no")
         {

@@ -5,19 +5,24 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using AutoPalBot.Services;
 using Microsoft.Extensions.DependencyInjection;
+using AutoPalBot.Services.Bot;
+using AutoPalBot.Services.OpenAI;
 
 public class Bot
 {
     public static async Task Main(string[] args)
     {
         // Настройка служб
+        string apik = "key";
+
         var services = new ServiceCollection()
+            .AddSingleton<IOpenAIService>(new OpenAIService(apik))
             .AddSingleton<IBotService, BotService>()
             .BuildServiceProvider();
 
         var botService = services.GetRequiredService<IBotService>();
+
 
         // Инициализация Telegram Bot Client
         var botClient = new TelegramBotClient("6984681761:AAHSmqsAG-twvGG5GtX8loYCBIPpcos20LU");

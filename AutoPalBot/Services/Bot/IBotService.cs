@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 using Telegram.Bot.Types;
 using Telegram.Bot;
 
-namespace AutoPalBot.Services;
+namespace AutoPalBot.Services.Bot;
 
 public interface IBotService
 {
-        Task HandleUpdateAsync(
-        ITelegramBotClient botClient, 
-        Update update, 
-        CancellationToken cancellationToken);
+    Task HandleUpdateAsync(
+    ITelegramBotClient botClient,
+    Update update,
+    CancellationToken cancellationToken);
 }
