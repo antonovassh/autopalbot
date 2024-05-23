@@ -17,36 +17,39 @@ public class Program
     {
         try
         {
-            var services = new ServiceCollection()
+            while (true)
+            {
+                var services = new ServiceCollection()
                .AddScoped<IOpenAIService, OpenAIService>()
                .AddScoped<IBotService, BotService>()
                .AddScoped<IDocumentService, DocumentService>()
                .AddScoped<IMindeeService, MindeeService>()
                .BuildServiceProvider();
 
-            var botService = services.GetRequiredService<IBotService>();
+                var botService = services.GetRequiredService<IBotService>();
 
-            var botClient = new TelegramBotClient("TelegramToken");
+                var botClient = new TelegramBotClient("TelegramToken");
 
-            using var cts = new CancellationTokenSource();
+                using var cts = new CancellationTokenSource();
 
-            var receiverOptions = new ReceiverOptions
-            {
-                AllowedUpdates = Array.Empty<UpdateType>()
-            };
+                var receiverOptions = new ReceiverOptions
+                {
+                    AllowedUpdates = Array.Empty<UpdateType>()
+                };
 
-            botClient.StartReceiving(
-                updateHandler: (client, update, token) => HandleUpdateAsync(client, update, botService, token),
-                pollingErrorHandler: HandleErrorAsync,
-                receiverOptions: receiverOptions,
-                cancellationToken: cts.Token
-            );
+                botClient.StartReceiving(
+                    updateHandler: (client, update, token) => HandleUpdateAsync(client, update, botService, token),
+                    pollingErrorHandler: HandleErrorAsync,
+                    receiverOptions: receiverOptions,
+                    cancellationToken: cts.Token
+                );
 
-            var me = await botClient.GetMeAsync();
-            Console.WriteLine($"Start listening for @{me.Username}");
-            Console.ReadLine();
+                var me = await botClient.GetMeAsync();
+                Console.WriteLine($"Start listening for @{me.Username}");
+                Console.ReadLine();
 
-            cts.Cancel();
+                cts.Cancel();
+            }
         }
         catch (Exception ex)
         {
