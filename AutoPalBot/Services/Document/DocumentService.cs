@@ -17,23 +17,72 @@ public class DocumentService : IDocumentService
     {
        
         PdfDocument document = new PdfDocument();
-        PdfPage page = document.AddPage();
+        document.Info.Title = "Car insuranse";
 
+        PdfPage page = document.AddPage();
         XGraphics gfx = XGraphics.FromPdfPage(page);
 
         GlobalFontSettings.FontResolver = new CustomFontResolver();
-        XFont font = new XFont("Arial", 20);
+        XFont font = new XFont("Verdana", 10);
 
-        gfx.DrawString(insuranse, font, XBrushes.Black,
-                new XRect(0, 0, page.Width, page.Height),
-                XStringFormats.Center);
+        double margin = 40;
+        double widthLimit = page.Width - 2 * margin;
+        double yPosition = margin;
 
-        //document.Save(filePath);
+        string[] paragraphs = insuranse.Split('\n');
 
+        // Iterate through each paragraph
+        foreach (string paragraphText in paragraphs)
+        {
+            // Split the paragraph text into lines
+            string[] lines = SplitTextIntoLines(gfx, paragraphText, font, widthLimit);
+
+            // Add each line of the paragraph to the document
+            foreach (string line in lines)
+            {
+                gfx.DrawString(line, font, XBrushes.Black,
+                    new XRect(margin, yPosition, page.Width - 2 * margin, page.Height),
+                    XStringFormats.TopLeft);
+                yPosition += font.Height + 5; // Move to the next line with a small margin
+            }
+
+            // Add a newline after the paragraph
+            yPosition += font.Height + 5;
+        }
         var pdfAsStream = new MemoryStream();
 
         document.Save(pdfAsStream, false);
         
         return pdfAsStream;
+    }
+
+    private string[] SplitTextIntoLines(XGraphics gfx, string text, XFont font, double widthLimit)
+    {
+        var lines = new List<string>();
+        var words = text.Split(' ');
+
+        string currentLine = "";
+        foreach (var word in words)
+        {
+            var testLine = currentLine + (currentLine.Length > 0 ? " " : "") + word;
+            var size = gfx.MeasureString(testLine, font);
+
+            if (size.Width < widthLimit)
+            {
+                currentLine = testLine;
+            }
+            else
+            {
+                lines.Add(currentLine);
+                currentLine = word;
+            }
+        }
+
+        if (currentLine.Length > 0)
+        {
+            lines.Add(currentLine);
+        }
+
+        return lines.ToArray();
     }
 }

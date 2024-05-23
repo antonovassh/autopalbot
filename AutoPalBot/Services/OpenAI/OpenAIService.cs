@@ -11,7 +11,7 @@ namespace AutoPalBot.Services.OpenAI;
 
 public class OpenAIService : IOpenAIService
 {
-    public const string apiKey = "sk-proj-xj45Dzi0ORVQ3fYJwgvJT3BlbkFJCI9Hc1SdDQaWnNbmvKWp";
+    public const string apiKey = "sk-proj-YdaWaFjVNjKOX4hetCVFT3BlbkFJ4WfzP9aN9mVhjYulQD0f";
 
 
     public async Task<HttpResponseMessage> HttpRawRequest(TextGenerationRequestModel prompt)
