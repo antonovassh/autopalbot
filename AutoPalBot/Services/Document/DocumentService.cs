@@ -13,7 +13,7 @@ namespace AutoPalBot.Services.DocumentGenerator;
 
 public class DocumentService : IDocumentService
 {
-    public void GenerateDocument(Insuranse insuranse)
+    public Stream GenerateDocument(string insuranse)
     {
        
         PdfDocument document = new PdfDocument();
@@ -24,13 +24,16 @@ public class DocumentService : IDocumentService
         GlobalFontSettings.FontResolver = new CustomFontResolver();
         XFont font = new XFont("Arial", 20);
 
-        //gfx.DrawString(text, font, XBrushes.Black,
-        //        new XRect(0, 0, page.Width, page.Height),
-        //        XStringFormats.Center);
+        gfx.DrawString(insuranse, font, XBrushes.Black,
+                new XRect(0, 0, page.Width, page.Height),
+                XStringFormats.Center);
 
-        string filePath = @"C:\Users\Олександра\Desktop\AutoPalBot\HelloWorld.pdf";
+        //document.Save(filePath);
 
-        document.Save(filePath);
-        document.Close();
+        var pdfAsStream = new MemoryStream();
+
+        document.Save(pdfAsStream, false);
+        
+        return pdfAsStream;
     }
 }

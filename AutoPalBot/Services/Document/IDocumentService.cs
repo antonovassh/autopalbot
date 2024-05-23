@@ -9,5 +9,5 @@ namespace AutoPalBot.Services.DocumentGenerator;
 
 public interface IDocumentService
 {
-    void GenerateDocument(Insuranse insuranse);
+    Stream GenerateDocument(string insuranse);
 }

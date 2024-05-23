@@ -11,7 +11,7 @@ namespace AutoPalBot.Services.OpenAI;
 
 public class OpenAIService : IOpenAIService
 {
-    public const string apiKey = "sk-proj-fHWauI760cF2C2J5xk8FT3BlbkFJ1ZUMPwWkJFiMXM9k4nAQ";
+    public const string apiKey = "sk-proj-xj45Dzi0ORVQ3fYJwgvJT3BlbkFJCI9Hc1SdDQaWnNbmvKWp";
 
 
     public async Task<HttpResponseMessage> HttpRawRequest(TextGenerationRequestModel prompt)
@@ -26,16 +26,15 @@ public class OpenAIService : IOpenAIService
         return await client.SendAsync(request);
     }
 
-    public async Task<Insuranse> GenerateText(TextGenerationRequestModel prompt)
+    public async Task<string> GenerateText(TextGenerationRequestModel prompt)
     {
         HttpResponseMessage response = await HttpRawRequest(prompt);
 
         var responseContentJson = await response.Content.ReadAsStringAsync();
 
         var result = JsonConvert.DeserializeObject<GptResponseModel>(responseContentJson);
-        var insuranse = JsonConvert.DeserializeObject<Insuranse>(result!.Choices.First()!.Message.Content);
+        string insuranse = result!.Choices.First()!.Message.Content;
 
         return insuranse;
-
     }
 }
