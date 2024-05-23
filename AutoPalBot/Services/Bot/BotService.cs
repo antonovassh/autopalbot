@@ -4,6 +4,7 @@ using AutoPalBot.Services.Mindee;
 using AutoPalBot.Services.OpenAI;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Message = Telegram.Bot.Types.Message;
 
 namespace AutoPalBot.Services.Bot;
 
@@ -11,145 +12,165 @@ public class BotService : IBotService
 {
     private readonly IOpenAIService _openAIService;
     private readonly IDocumentService _documentService;
-    //private readonly IMindeeService _mindeeService;
-    public BotService(IOpenAIService openAISerice, IDocumentService documentService) //, IMindeeService mindeeService)
+    private readonly IMindeeService _mindeeService;
+
+    private BotState _currentState = BotState.StartingConversation;
+    private string? _userPassportNumber;
+    private string? _userVehicleNumber;
+
+    public BotService(IOpenAIService openAISerice, IDocumentService documentService, IMindeeService mindeeService)
     {
         _openAIService = openAISerice;
         _documentService = documentService;
-
-        //_mindeeService = mindeeService;
+        _mindeeService = mindeeService;
     }
-
-    private enum BotState
-    {
-        AwaitingPassportNumber,
-        AwaitingVehicleNumber,
-        ConfirmingDocuments,
-        AwaitingPriceConfirmation,
-        GeneratingInsuranse
-    }
-
-    private BotState _currentState = BotState.AwaitingPassportNumber;
-    private string _userPassportNumber;
-    private string _userVehicleNumber;
 
     public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
         if (update.Message is not { } message)
             return;
-        if (message.Text is not { } messageText)
-            return;
-
-        var chatId = message.Chat.Id;
 
         switch (_currentState)
         {
-
+            case BotState.StartingConversation:
+                await RequestUserPassport(botClient, message.Chat.Id);
+                break;
             case BotState.AwaitingPassportNumber:
-                await HandlePassportNumberAsync(botClient, chatId, messageText);
+                await ParsePassportPhotoAsync(botClient, message.Chat.Id, message);
                 break;
             case BotState.AwaitingVehicleNumber:
-                await HandleVehicleNumberAsync(botClient, chatId, messageText);
+                await ParseVehicleIdentificationPhotoAsync(botClient, message.Chat.Id, message);
                 break;
-            case BotState.ConfirmingDocuments:
-                await HandleDocumentConfirmationAsync(botClient, chatId, messageText);
+            case BotState.AwaitingDataConfirmation:
+                await CreateInvoiceAsync(botClient, message.Chat.Id, message);
                 break;
             case BotState.AwaitingPriceConfirmation:
-                await HandlePriceConfirmationAsync(botClient, chatId, messageText);
+                await GeneraeleInsuranseAsync(botClient, message.Chat.Id, message);
                 break;
-            case BotState.GeneratingInsuranse:
-                await HandleInsuranseGenerationAsync(botClient, chatId, messageText);
-                break;
-
         }
     }
-    private async Task HandlePassportNumberAsync(ITelegramBotClient botClient, long chatId, string messageText)
+
+    private async Task RequestUserPassport(ITelegramBotClient botClient, long chatId)
     {
+        //TODO: move string to resources
         await botClient.SendTextMessageAsync(chatId,
-            "Welcome! I am AutoPalBot.\r\n" +
-            "I will help you to make your car insuranse." +
-            "\r\nPlease send a photo of your passport.");
-
-        _currentState = BotState.AwaitingVehicleNumber;
-
+                "Welcome!! I am AutoPalBot.\r\n" +
+                "I will help you to make your car insurance." +
+                "\r\nPlease send a photo of your passport.");
+        _currentState = BotState.AwaitingPassportNumber;
     }
 
-    private async Task HandleVehicleNumberAsync(ITelegramBotClient botClient, long chatId, string messageText)
+    private async Task ParsePassportPhotoAsync(ITelegramBotClient botClient, long chatId, Message message)
     {
-        _userPassportNumber = messageText;
-        await botClient.SendTextMessageAsync(chatId,
-            "Thank you! Now, please enter your vehicle identification number.");
 
-        _currentState = BotState.ConfirmingDocuments;
-    }
-
-    private async Task HandleDocumentConfirmationAsync(ITelegramBotClient botClient, long chatId, string messageText)
-    {
-        _userVehicleNumber = messageText;
-
-        var confirmationMessage = $"Please confirm your details:" +
-            $"\nPassport Number: {_userPassportNumber}" +
-            $"\nVehicle Identification Number: {_userVehicleNumber}" +
-            $"\nIs this information correct? (yes/no)";
-
-        await botClient.SendTextMessageAsync(chatId, confirmationMessage);
-
-        _currentState = BotState.AwaitingPriceConfirmation;
-    }
-
-    private async Task HandlePriceConfirmationAsync(ITelegramBotClient botClient, long chatId, string messageText)
-    {
-        if (messageText.ToLower() == "yes")
+        if (message.Photo != null) 
         {
+            string fileName = $"{message.Chat.Username}_passport.jpg";
+
+            var photo = message.Photo[^1]; // Get the last (largest) photo
+            var photoFile = await botClient.GetFileAsync(photo.FileId);
+            var photoStream = new MemoryStream();
+
+            await botClient.DownloadFileAsync(photoFile.FilePath!, photoStream);
+
+            byte[] photoBytes = photoStream.ToArray();
+
+            _userPassportNumber = await _mindeeService.ExtractDataByEndpointNameAsync(photoBytes, fileName, "passport");
+
+            _currentState = BotState.AwaitingVehicleNumber;
+
+            //TODO: move string to resources
             await botClient.SendTextMessageAsync(chatId,
-                "The fixed price for the insurance is 100 USD. Do you agree? (yes/no)");
-            _currentState = BotState.GeneratingInsuranse;
+                "Thank you! Now, please send a photo of your vehicle identification document.");
+        } 
+        else
+        {
+            //TODO: move string to resources
+            await botClient.SendTextMessageAsync(chatId,
+                "Oops! Something went wrong. Let's try again. Please send photo of your passport.");
+
+            await RequestUserPassport(botClient, message.Chat.Id);
         }
-        else if (messageText.ToLower() == "no")
+    }
+
+    private async Task ParseVehicleIdentificationPhotoAsync(ITelegramBotClient botClient, long chatId, Message message)
+    {
+
+        if (message.Photo != null) 
+        {
+            string fileName = $"{message.Chat.Username}_car_license.jpg";
+
+            var photo = message.Photo[^1]; // Get the last (largest) photo
+            var photoFile = await botClient.GetFileAsync(photo.FileId);
+            var photoStream = new MemoryStream();
+
+            await botClient.DownloadFileAsync(photoFile.FilePath!, photoStream);
+
+            byte[] photoBytes = photoStream.ToArray();
+
+            _userVehicleNumber = await _mindeeService.ExtractDataByEndpointNameAsync(photoBytes, fileName, "vehicle_document");
+
+            //TODO: move string to resources
+            var confirmationMessage = $"Please confirm your details:" +
+                $"\nPassport Number: {_userPassportNumber}" +
+                $"\nVehicle Identification Number: {_userVehicleNumber}" +
+                $"\nIs this information correct?";
+
+            await botClient.SendTextMessageAsync(chatId, confirmationMessage);
+
+            _currentState = BotState.AwaitingDataConfirmation;
+        } 
+        else 
+        {
+            //TODO: move string to resources
+            await botClient.SendTextMessageAsync(chatId,
+                "Oops! Something went wrong. Let's try again.");
+
+            await RequestUserPassport(botClient, message.Chat.Id);
+        }
+
+    }
+
+    private async Task CreateInvoiceAsync(ITelegramBotClient botClient, long chatId, Message message)
+    {
+        if (await _openAIService.EnsureSentenceIsPositive(message.Text!))
+        {
+            //TODO: move string to resources
+            await botClient.SendTextMessageAsync(chatId,
+                "The fixed price for the insurance is 100 USD. Do you agree?");
+            _currentState = BotState.AwaitingPriceConfirmation;
+        }
+        else
         {
             _currentState = BotState.AwaitingPassportNumber;
             _userPassportNumber = null;
             _userVehicleNumber = null;
+            //TODO: move string to resources
             await botClient.SendTextMessageAsync(chatId,
-                "Let's try again. Please send photo of your passport.");
-            _currentState = BotState.AwaitingVehicleNumber;
+                "Let's try again.");
+            await RequestUserPassport(botClient, message.Chat.Id);
         }
     }
 
-    private async Task HandleInsuranseGenerationAsync(ITelegramBotClient botClient, long chatId, string messageText)
+    private async Task GeneraeleInsuranseAsync(ITelegramBotClient botClient, long chatId, Message message)
     {
-        if (messageText.ToLower() == "yes")
+        if (await _openAIService.EnsureSentenceIsPositive(message.Text!))
         {
-            var prompt = new TextGenerationRequestModel()
-            {
-                Model = "gpt-3.5-turbo",
-                messages = new List<TextGenerationMessageModel>() {
-                new TextGenerationMessageModel()
-                {
-                    Content = $"Generate a car insurance document for passport number " +
-                    $"{_userPassportNumber} and vehicle number {_userVehicleNumber}.",
-                    Role = "user"
-                },
-            }
-            };
-
-            var insuranse = await _openAIService.GenerateText(prompt);
-            Console.WriteLine(insuranse);
+            var insuranse = await _openAIService.GenerateCanInsurance(_userPassportNumber!, _userVehicleNumber!);
 
             using (var pdfAsStream = _documentService.GenerateDocument(insuranse))
-            {
-                await botClient.SendDocumentAsync(chatId, new InputFileStream(pdfAsStream, "CarInsuranse.pdf"));
-            }
+
+            await botClient.SendDocumentAsync(chatId, new InputFileStream(pdfAsStream, "CarInsuranse.pdf"));
+
             _currentState = BotState.AwaitingPassportNumber;
 
         }
-        else if (messageText.ToLower() == "no")
+        else
         {
+            //TODO: move string to resources
             await botClient.SendTextMessageAsync(chatId, "We apologize, but the price is fixed at 100 USD.");
-            _currentState = BotState.AwaitingPassportNumber;
+
+            await RequestUserPassport(botClient, message.Chat.Id);
         }
     }
-
 }
-
-

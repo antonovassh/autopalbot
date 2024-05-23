@@ -1,13 +1,7 @@
-﻿using AutoPalBot.Models.OpenAI;
-using AutoPalBot.Services.Document;
+﻿using AutoPalBot.Services.Document;
 using PdfSharp.Drawing;
 using PdfSharp.Fonts;
 using PdfSharp.Pdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AutoPalBot.Services.DocumentGenerator;
 
@@ -16,38 +10,38 @@ public class DocumentService : IDocumentService
     public Stream GenerateDocument(string insuranse)
     {
        
-        PdfDocument document = new PdfDocument();
+        PdfDocument document = new();
         document.Info.Title = "Car insuranse";
 
         PdfPage page = document.AddPage();
         XGraphics gfx = XGraphics.FromPdfPage(page);
 
         GlobalFontSettings.FontResolver = new CustomFontResolver();
-        XFont font = new XFont("Verdana", 10);
+        //TODO: Magic numbers to consts
+        XFont font = new("Arial", 8);
 
-        double margin = 40;
+        //TODO: Magic numbers to consts
+        double margin = 20;
         double widthLimit = page.Width - 2 * margin;
         double yPosition = margin;
 
         string[] paragraphs = insuranse.Split('\n');
 
-        // Iterate through each paragraph
         foreach (string paragraphText in paragraphs)
         {
-            // Split the paragraph text into lines
             string[] lines = SplitTextIntoLines(gfx, paragraphText, font, widthLimit);
 
-            // Add each line of the paragraph to the document
             foreach (string line in lines)
             {
                 gfx.DrawString(line, font, XBrushes.Black,
                     new XRect(margin, yPosition, page.Width - 2 * margin, page.Height),
                     XStringFormats.TopLeft);
-                yPosition += font.Height + 5; // Move to the next line with a small margin
+                //TODO: Magic numbers to consts
+                yPosition += font.Height + 2; 
             }
 
-            // Add a newline after the paragraph
-            yPosition += font.Height + 5;
+            //TODO: Magic numbers to consts
+            yPosition += font.Height + 2;
         }
         var pdfAsStream = new MemoryStream();
 
