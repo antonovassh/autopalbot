@@ -1,15 +1,8 @@
-﻿using AutoPalBot.Models.OpenAI;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace AutoPalBot.Services.OpenAI;
+﻿namespace AutoPalBot.Services.OpenAI;
 
 public interface IOpenAIService
 {
-    public Task<string> GenerateText(TextGenerationRequestModel prompt);
+    Task<bool> EnsureSentenceIsPositive(string sentence);
 
-    public Task<HttpResponseMessage> HttpRawRequest(TextGenerationRequestModel prompt);
+    Task<string> GenerateCanInsurance(string passportNumber, string vehicleNumber);
 }

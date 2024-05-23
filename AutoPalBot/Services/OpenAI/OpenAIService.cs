@@ -1,20 +1,63 @@
 ﻿using AutoPalBot.Models.OpenAI;
 using Newtonsoft.Json;
-using RestSharp;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace AutoPalBot.Services.OpenAI;
 
 public class OpenAIService : IOpenAIService
 {
-    public const string apiKey = "sk-proj-YdaWaFjVNjKOX4hetCVFT3BlbkFJ4WfzP9aN9mVhjYulQD0f";
 
+    private const string apiKey = "ApiKey";
 
-    public async Task<HttpResponseMessage> HttpRawRequest(TextGenerationRequestModel prompt)
+    public async Task<bool> EnsureSentenceIsPositive(string sentence)
+    {
+        var messages = new List<TextGenerationMessageModel>()
+        {
+             new TextGenerationMessageModel()
+            {
+                 //TODO: move string to resources
+                Content = "Answer only true ot false. " +
+                    "If the sentence expresses agreement like ok or yes then answer true. Otherwise answer false",
+                Role = "system"
+            },
+            new TextGenerationMessageModel()
+            {
+                Content = sentence,
+                Role = "user"
+            }
+        };
+
+        var response = await GenerateText(messages);
+
+        if(bool.TryParse(response, out var result)) 
+        {  
+            return result; 
+        }
+        else
+        {
+            //TODO: create EnsureSentenceIsPositiveException then handle it. 
+            return false;
+        }
+    }
+
+    public Task<string> GenerateCanInsurance(string passportNumber, string vehicleNumber)
+    {
+        //TODO: move string to resources
+        var promt = $"Generate a car insurance document for passport number {passportNumber} and vehicle number {vehicleNumber}.";
+
+        var messages = new List<TextGenerationMessageModel>()
+        {
+            new TextGenerationMessageModel()
+            {
+                Content = promt,
+                Role = "user"
+            }
+        };
+
+        return GenerateText(messages);
+    }
+
+    private Task<HttpResponseMessage> HttpRawRequest(TextGenerationRequestModel prompt)
     {
         var client = new HttpClient();
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
@@ -23,18 +66,23 @@ public class OpenAIService : IOpenAIService
         string jsonContent = JsonConvert.SerializeObject(prompt);
         request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-        return await client.SendAsync(request);
+        return client.SendAsync(request);
     }
 
-    public async Task<string> GenerateText(TextGenerationRequestModel prompt)
+    private async Task<string> GenerateText(List<TextGenerationMessageModel> messages)
     {
-        HttpResponseMessage response = await HttpRawRequest(prompt);
+        var generationModel = new TextGenerationRequestModel()
+        {
+            Model = "gpt-4o",
+            Messages = messages
+        };
+
+        HttpResponseMessage response = await HttpRawRequest(generationModel);
 
         var responseContentJson = await response.Content.ReadAsStringAsync();
 
         var result = JsonConvert.DeserializeObject<GptResponseModel>(responseContentJson);
-        string insuranse = result!.Choices.First()!.Message.Content;
 
-        return insuranse;
+        return result!.Choices!.First().Message!.Content!;
     }
 }

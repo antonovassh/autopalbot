@@ -1,31 +1,44 @@
-﻿using RestSharp;
-using Newtonsoft.Json.Linq;
-using System.Threading.Tasks;
-using AutoPalBot.Models;
+﻿using Mindee;
+using Mindee.Http;
+using Mindee.Input;
+using Mindee.Product.Generated;
+using System.Text.RegularExpressions;
 
 namespace AutoPalBot.Services.Mindee;
 
-public static class MindeeService
+public class MindeeService : IMindeeService
 {
-    public static async Task<DocumentData> ExtractDataAsync(string imagePath)
+    //TODO: apiKey to secrets
+    private const string apiKey = "28e01ae4e6358b47b1501de63fc89bb4";
+
+    private readonly MindeeClient _mindeeClient;
+
+    public MindeeService()
     {
-        var client = new RestClient("https://api.mindee.net/v1/products/your-mindee-product/parse");
-        var request = new RestRequest
-        {
-            Method = Method.Post
-        };
-        request.AddHeader("Authorization", "28e01ae4e6358b47b1501de63fc89bb4");
-        request.AddFile("document", imagePath, "image/jpeg"); // Specify the MIME type
+        _mindeeClient = new MindeeClient(apiKey);
+    }
 
-        var response = await client.ExecuteAsync(request);
-        var jsonResponse = JObject.Parse(response.Content);
+    public async Task<string> ExtractDataByEndpointNameAsync(byte[] fileBites, string fileName, string endpointName)
+    {
+        var inputSource = new LocalInputSource(fileBites, fileName);
 
-        var documentData = new DocumentData
-        {
-            PassportNumber = jsonResponse["document"]["ID Number"]["passport_number"].ToString(),
-            VehicleIdentificationNumber = jsonResponse["document"]["inference"]["vehicle_identification_number"].ToString()
-        };
+        CustomEndpoint endpoint = new(
+                endpointName: endpointName,
+                accountName: "antonovassh",
+                version: "1"
+            );
 
-        return documentData;
+        var response = await _mindeeClient.EnqueueAndParseAsync<GeneratedV1>(inputSource, endpoint);
+
+        return ExtractValue(response.Document.Inference.Prediction.ToString());
+    }
+
+    private string ExtractValue(string input)
+    {
+        string pattern = @":value:\s*([A-Z0-9]+)";
+
+        Match match = Regex.Match(input, pattern);
+
+        return match.Groups[1].Value;
     }
 }
