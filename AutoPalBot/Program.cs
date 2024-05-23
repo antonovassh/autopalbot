@@ -26,8 +26,8 @@ public class Program
 
             var botService = services.GetRequiredService<IBotService>();
 
-            //TODO: telegram token to secrets.
-            var botClient = new TelegramBotClient("6984681761:AAHSmqsAG-twvGG5GtX8loYCBIPpcos20LU");
+            
+            var botClient = new TelegramBotClient("ApiKey");
 
             using var cts = new CancellationTokenSource();
 

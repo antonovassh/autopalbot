@@ -6,8 +6,8 @@ namespace AutoPalBot.Services.OpenAI;
 
 public class OpenAIService : IOpenAIService
 {
-    //TODO: apiKey to secrets
-    private const string apiKey = "sk-proj-556qV2RLDmrx9z8NQfY3T3BlbkFJldZJzYpGtLHOrAIfHAPz";
+
+    private const string apiKey = "ApiKey";
 
     public async Task<bool> EnsureSentenceIsPositive(string sentence)
     {
