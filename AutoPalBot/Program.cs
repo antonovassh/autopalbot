@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using Microsoft.Extensions.DependencyInjection;
 using AutoPalBot.Services.Bot;
 using AutoPalBot.Services.OpenAI;
+using AutoPalBot.Services.DocumentGenerator;
 
 public class Bot
 {
@@ -17,6 +18,7 @@ public class Bot
         var services = new ServiceCollection()
             .AddSingleton<IOpenAIService, OpenAIService>()
             .AddSingleton<IBotService, BotService>()
+            .AddSingleton<IDocumentService,  DocumentService>()
             .BuildServiceProvider();
 
         var botService = services.GetRequiredService<IBotService>();
