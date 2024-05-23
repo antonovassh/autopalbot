@@ -7,6 +7,11 @@ namespace AutoPalBot.Services.DocumentGenerator;
 
 public class DocumentService : IDocumentService
 {
+    public DocumentService()
+    {
+        GlobalFontSettings.FontResolver = new CustomFontResolver();
+    }
+
     public Stream GenerateDocument(string insuranse)
     {
        
@@ -15,8 +20,7 @@ public class DocumentService : IDocumentService
 
         PdfPage page = document.AddPage();
         XGraphics gfx = XGraphics.FromPdfPage(page);
-
-        GlobalFontSettings.FontResolver = new CustomFontResolver();
+       
         //TODO: Magic numbers to consts
         XFont font = new("Arial", 8);
 

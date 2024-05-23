@@ -9,7 +9,7 @@ namespace AutoPalBot.Services.Mindee;
 public class MindeeService : IMindeeService
 {
     //TODO: apiKey to secrets
-    private const string apiKey = "28e01ae4e6358b47b1501de63fc89bb4";
+    private const string apiKey = "MindeeKey";
 
     private readonly MindeeClient _mindeeClient;
 

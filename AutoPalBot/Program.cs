@@ -18,16 +18,15 @@ public class Program
         try
         {
             var services = new ServiceCollection()
-               .AddSingleton<IOpenAIService, OpenAIService>()
-               .AddSingleton<IBotService, BotService>()
-               .AddSingleton<IDocumentService, DocumentService>()
-               .AddSingleton<IMindeeService, MindeeService>()
+               .AddScoped<IOpenAIService, OpenAIService>()
+               .AddScoped<IBotService, BotService>()
+               .AddScoped<IDocumentService, DocumentService>()
+               .AddScoped<IMindeeService, MindeeService>()
                .BuildServiceProvider();
 
             var botService = services.GetRequiredService<IBotService>();
 
-            
-            var botClient = new TelegramBotClient("ApiKey");
+            var botClient = new TelegramBotClient("TelegramToken");
 
             using var cts = new CancellationTokenSource();
 
