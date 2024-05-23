@@ -164,7 +164,7 @@ public class BotService : IBotService
             await botClient.SendTextMessageAsync(chatId,
                 "Thank you for using AutoPalBot! If you'd like to get one more insurance, just message me anything :)");
 
-            _currentState = BotState.AwaitingPassportNumber;
+            _currentState = BotState.StartingConversation;
         }
         else
         {
