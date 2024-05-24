@@ -139,11 +139,9 @@ public class BotService : IBotService
             }
         }
         else
-           
+
            await SendPhotoIncorrectAsync(botClient, chatId, BotState.AwaitingVehicleNumber);
     } 
-
-    
 
     private async Task CreateInvoiceAsync(ITelegramBotClient botClient, long chatId, Message message)
     {
