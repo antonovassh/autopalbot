@@ -3,6 +3,7 @@ using AutoPalBot.Services.DocumentGenerator;
 using AutoPalBot.Services.Mindee;
 using AutoPalBot.Services.OpenAI;
 using Telegram.Bot;
+using Telegram.Bot.Requests;
 using Telegram.Bot.Types;
 using Message = Telegram.Bot.Types.Message;
 
@@ -52,18 +53,23 @@ public class BotService : IBotService
 
     private async Task RequestUserPassport(ITelegramBotClient botClient, long chatId)
     {
+        Chat chat = await botClient.GetChatAsync(chatId);
+        string username = chat.Username;
+
         //TODO: move string to resources
         await botClient.SendTextMessageAsync(chatId,
-                "Welcome!! I am AutoPalBot.\r\n" +
-                "I will help you to make your car insurance." +
-                "\r\nPlease send a photo of your passport.");
+               $"Hello {username}! I'm your virtual assistant from InsuranceCompany. " +
+               "My name is AutoPalBot.I can help you quickly and easily get car insurance. " +
+               "Just share a photo of your passport and vehicle ID document, " +
+               "and I'll take care of the rest.Let's get started on securing your vehicle today!" +
+               " Please, send me a photo of your passport.");
+
         _currentState = BotState.AwaitingPassportNumber;
     }
 
     private async Task ParsePassportPhotoAsync(ITelegramBotClient botClient, long chatId, Message message)
     {
-
-        if (message.Photo != null) 
+        if (message.Photo != null)
         {
             string fileName = $"{message.Chat.Username}_passport.jpg";
 
@@ -77,26 +83,30 @@ public class BotService : IBotService
 
             _userPassportNumber = await _mindeeService.ExtractDataByEndpointNameAsync(photoBytes, fileName, "passport");
 
-            _currentState = BotState.AwaitingVehicleNumber;
+            if (!string.IsNullOrEmpty(_userPassportNumber))
+            {
+                _currentState = BotState.AwaitingVehicleNumber;
 
-            //TODO: move string to resources
-            await botClient.SendTextMessageAsync(chatId,
-                "Thank you! Now, please send a photo of your vehicle identification document.");
-        } 
+                //TODO: move string to resources
+                await botClient.SendTextMessageAsync(chatId,
+                    "Thank you! Now, please send a photo of your vehicle identification document.");
+            }
+            else
+            {
+                await SendPhotoIncorrectAsync(botClient, chatId, BotState.AwaitingPassportNumber);
+            }
+        }
         else
         {
-            //TODO: move string to resources
-            await botClient.SendTextMessageAsync(chatId,
-                "Oops! Something went wrong. Let's try again. Please send photo of your passport.");
-
-            await RequestUserPassport(botClient, message.Chat.Id);
+            await SendPhotoIncorrectAsync(botClient, chatId, BotState.AwaitingPassportNumber);
         }
+
     }
 
     private async Task ParseVehicleIdentificationPhotoAsync(ITelegramBotClient botClient, long chatId, Message message)
     {
 
-        if (message.Photo != null) 
+        if (message.Photo != null)
         {
             string fileName = $"{message.Chat.Username}_car_license.jpg";
 
@@ -110,26 +120,30 @@ public class BotService : IBotService
 
             _userVehicleNumber = await _mindeeService.ExtractDataByEndpointNameAsync(photoBytes, fileName, "vehicle_document");
 
-            //TODO: move string to resources
-            var confirmationMessage = $"Please confirm your details:" +
-                $"\nPassport Number: {_userPassportNumber}" +
-                $"\nVehicle Identification Number: {_userVehicleNumber}" +
-                $"\nIs this information correct?";
+            if (!string.IsNullOrEmpty(_userVehicleNumber))
+            {
 
-            await botClient.SendTextMessageAsync(chatId, confirmationMessage);
+                //TODO: move string to resources
+                var confirmationMessage = $"Please confirm your details:" +
+                    $"\nPassport Number: {_userPassportNumber}" +
+                    $"\nVehicle Identification Number: {_userVehicleNumber}" +
+                    $"\nIs this information correct?";
 
-            _currentState = BotState.AwaitingDataConfirmation;
-        } 
-        else 
-        {
-            //TODO: move string to resources
-            await botClient.SendTextMessageAsync(chatId,
-                "Oops! Something went wrong. Let's try again.");
+                await botClient.SendTextMessageAsync(chatId, confirmationMessage);
 
-            await RequestUserPassport(botClient, message.Chat.Id);
+                _currentState = BotState.AwaitingDataConfirmation;
+            }
+            else
+            {
+                await SendPhotoIncorrectAsync(botClient, chatId, BotState.AwaitingVehicleNumber);
+            }
         }
+        else
+           
+           await SendPhotoIncorrectAsync(botClient, chatId, BotState.AwaitingVehicleNumber);
+    } 
 
-    }
+    
 
     private async Task CreateInvoiceAsync(ITelegramBotClient botClient, long chatId, Message message)
     {
@@ -173,5 +187,14 @@ public class BotService : IBotService
 
             await RequestUserPassport(botClient, message.Chat.Id);
         }
+    }
+
+    private async Task SendPhotoIncorrectAsync(ITelegramBotClient botClient, long chatId, BotState state)
+    {
+        await botClient.SendTextMessageAsync(chatId,
+                "Unfortunately, the document you provided is not correct. Let`s try again. " +
+                "Please, send a photo of your document again.");
+
+        _currentState = state;
     }
 }
