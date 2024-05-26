@@ -143,6 +143,8 @@ public class BotService : IBotService
         _usersRepository.SetUser(message.Chat.Id, user);
     }
 
+  
+
     private async Task<UserModel> ProcessUserMessage(
         ITelegramBotClient botClient,
         long chatId,

@@ -32,7 +32,7 @@ public class Program
 
             var botService = services.GetRequiredService<IBotService>();
 
-            var botClient = new TelegramBotClient("6984681761:AAHSmqsAG-twvGG5GtX8loYCBIPpcos20LU");
+                var botClient = new TelegramBotClient("TelegramToken");
 
             using var cts = new CancellationTokenSource();
 
