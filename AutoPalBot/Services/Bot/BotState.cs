@@ -6,5 +6,6 @@ public enum BotState
     AwaitingPassportNumber,
     AwaitingVehicleNumber,
     AwaitingDataConfirmation,
-    AwaitingPriceConfirmation
+    AwaitingPriceConfirmation,
+    AwaitingForQuestion
 }

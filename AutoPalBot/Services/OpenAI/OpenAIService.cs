@@ -7,9 +7,9 @@ namespace AutoPalBot.Services.OpenAI;
 public class OpenAIService : IOpenAIService
 {
 
-    private const string apiKey = "OpenAiApiKey";
+    private const string apiKey = "sk-proj-FV0P4hEnHXQsVtFmDuzzT3BlbkFJ2mJyxviwd04hFMhqaF6h";
 
-    public async Task<bool> EnsureSentenceIsPositive(string sentence)
+    public async Task<bool> EnsureSentenceIsPositive(string input)
     {
         var messages = new List<TextGenerationMessageModel>()
         {
@@ -22,7 +22,7 @@ public class OpenAIService : IOpenAIService
             },
             new TextGenerationMessageModel()
             {
-                Content = sentence,
+                Content = input,
                 Role = "user"
             }
         };
@@ -38,6 +38,57 @@ public class OpenAIService : IOpenAIService
             //TODO: create EnsureSentenceIsPositiveException then handle it. 
             return false;
         }
+    }
+
+    public async Task<bool> EnsureSentenceIsQuestion(string input)
+    {
+        var messages = new List<TextGenerationMessageModel>()
+        {
+             new TextGenerationMessageModel()
+            {
+                 //TODO: move string to resources
+                Content = "Answer only true ot false. " +
+                    "If the sentence is a question answer true. Otherwise answer false",
+                Role = "system"
+            },
+            new TextGenerationMessageModel()
+            {
+                Content = input,
+                Role = "user"
+            }
+        };
+
+        var response = await GenerateText(messages);
+
+        if (bool.TryParse(response, out var result))
+        {
+            return result;
+        }
+        else
+        {
+            //TODO: create EnsureSentenceIsPositiveException then handle it. 
+            return false;
+        }
+    }
+
+    public Task<string> AnswerAsInsuranceAgent(string input)
+    {
+        var messages = new List<TextGenerationMessageModel>()
+        {
+             new TextGenerationMessageModel()
+            {
+                 //TODO: move string to resources
+                Content = "You're an experienced salesman and insurance agent.",
+                Role = "system"
+            },
+            new TextGenerationMessageModel()
+            {
+                Content = input,
+                Role = "user"
+            }
+        };
+
+        return GenerateText(messages);
     }
 
     public Task<string> GenerateCanInsurance(string passportNumber, string vehicleNumber)

@@ -8,6 +8,9 @@ using AutoPalBot.Services.Bot;
 using AutoPalBot.Services.OpenAI;
 using AutoPalBot.Services.DocumentGenerator;
 using AutoPalBot.Services.Mindee;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using AutoPalBot.Repositories.Users;
 
 namespace AutoPalBot;
 
@@ -17,39 +20,39 @@ public class Program
     {
         try
         {
-            while (true)
+            var services = new ServiceCollection()
+                .AddMemoryCache()
+                .AddScoped<IUsersRepository, UsersRepository>()
+                .AddScoped<IOpenAIService, OpenAIService>()
+                .AddScoped<IBotService, BotService>()
+                .AddScoped<IDocumentService, DocumentService>()
+                .AddScoped<IMindeeService, MindeeService>()
+
+                .BuildServiceProvider();
+
+            var botService = services.GetRequiredService<IBotService>();
+
+            var botClient = new TelegramBotClient("6984681761:AAHSmqsAG-twvGG5GtX8loYCBIPpcos20LU");
+
+            using var cts = new CancellationTokenSource();
+
+            var receiverOptions = new ReceiverOptions
             {
-                var services = new ServiceCollection()
-               .AddScoped<IOpenAIService, OpenAIService>()
-               .AddScoped<IBotService, BotService>()
-               .AddScoped<IDocumentService, DocumentService>()
-               .AddScoped<IMindeeService, MindeeService>()
-               .BuildServiceProvider();
+                AllowedUpdates = Array.Empty<UpdateType>()
+            };
 
-                var botService = services.GetRequiredService<IBotService>();
+            botClient.StartReceiving(
+                updateHandler: (client, update, token) => HandleUpdateAsync(client, update, botService, token),
+                pollingErrorHandler: HandleErrorAsync,
+                receiverOptions: receiverOptions,
+                cancellationToken: cts.Token
+            );
 
-                var botClient = new TelegramBotClient("TelegramToken");
+            var me = await botClient.GetMeAsync();
+            Console.WriteLine($"Start listening for @{me.Username}");
+            Console.ReadLine();
 
-                using var cts = new CancellationTokenSource();
-
-                var receiverOptions = new ReceiverOptions
-                {
-                    AllowedUpdates = Array.Empty<UpdateType>()
-                };
-
-                botClient.StartReceiving(
-                    updateHandler: (client, update, token) => HandleUpdateAsync(client, update, botService, token),
-                    pollingErrorHandler: HandleErrorAsync,
-                    receiverOptions: receiverOptions,
-                    cancellationToken: cts.Token
-                );
-
-                var me = await botClient.GetMeAsync();
-                Console.WriteLine($"Start listening for @{me.Username}");
-                Console.ReadLine();
-
-                cts.Cancel();
-            }
+            cts.Cancel();
         }
         catch (Exception ex)
         {

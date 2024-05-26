@@ -1,8 +1,10 @@
-﻿using AutoPalBot.Models.User;
+﻿using AutoPalBot.Models.OpenAI;
+using AutoPalBot.Models.User;
 using AutoPalBot.Repositories.Users;
 using AutoPalBot.Services.DocumentGenerator;
 using AutoPalBot.Services.Mindee;
 using AutoPalBot.Services.OpenAI;
+using System.Reflection.Metadata.Ecma335;
 using Telegram.Bot;
 using Telegram.Bot.Requests;
 using Telegram.Bot.Requests.Abstractions;
@@ -51,23 +53,141 @@ public class BotService : IBotService
                 break;
 
             case BotState.AwaitingPassportNumber:
-                user = await ParsePassportPhotoAsync(botClient, message.Chat.Id, message, user);
+                user = await ProcessUserMessage(
+                    botClient,
+                    message.Chat.Id,
+                    message,
+                    user,
+                    () => ParsePassportPhotoAsync(botClient, message.Chat.Id, message, user),
+                    async () => {
+                        await botClient.SendTextMessageAsync(
+                            message.Chat.Id,
+                            "Please, send me a photo of your passport.");
+                    },
+                    () => Task.FromResult(message.Photo != null));
                 break;
 
             case BotState.AwaitingVehicleNumber:
-                user = await ParseVehicleIdentificationPhotoAsync(botClient, message.Chat.Id, message, user);
+                user = await ProcessUserMessage(
+                    botClient,
+                    message.Chat.Id,
+                    message,
+                    user,
+                    () => ParseVehicleIdentificationPhotoAsync(botClient, message.Chat.Id, message, user),
+                    async () => {
+                        await botClient.SendTextMessageAsync(
+                            message.Chat.Id,
+                            "Please, send a photo of your vehicle identification document.");
+                    },
+                    () => Task.FromResult(message.Photo != null));
                 break;
 
             case BotState.AwaitingDataConfirmation:
-                user = await CreateInvoiceAsync(botClient, message.Chat.Id, message, user);
+                user = await ProcessUserMessage(
+                    botClient,
+                    message.Chat.Id,
+                    message,
+                    user,
+                    () => CreateInvoiceAsync(botClient, message.Chat.Id, message, user),
+                    async () => {
+                        await botClient.SendTextMessageAsync(
+                            message.Chat.Id,
+                            $"Please confirm your details:" +
+                            $"\nPassport Number: {user.PassportNumber}" +
+                            $"\nVehicle Identification Number: {user.VehicleNumber}" +
+                            $"\nIs this information correct?");
+                    },
+                    async () => {
+                        if (message.Text == null)
+                            return false;
+
+                        if (message.Text.Last() == '?')
+                            return false;
+
+                        var isQuestion = await _openAIService.EnsureSentenceIsQuestion(message.Text!);
+
+                        return !isQuestion;
+                    });
                 break;
 
             case BotState.AwaitingPriceConfirmation:
-                user = await GeneraeleInsuranseAsync(botClient, message.Chat.Id, message, user);
+                user = await ProcessUserMessage(
+                    botClient,
+                    message.Chat.Id,
+                    message,
+                    user,
+                    () => GeneraeleInsuranseAsync(botClient, message.Chat.Id, message, user),
+                    async () => {
+                        await botClient.SendTextMessageAsync(
+                            message.Chat.Id, 
+                            "The fixed price for the insurance is 100 USD. Do you agree?");
+                    },
+                    async () => {
+                        if (message.Text == null)
+                            return false;
+
+                        if (message.Text.Last() == '?')
+                            return false;
+
+                        var isQuestion = await _openAIService.EnsureSentenceIsQuestion(message.Text!);
+
+                        return !isQuestion;
+                    });
+                break;
+
+            case BotState.AwaitingForQuestion:
+                user = await AnswerFromUserQuestion(botClient, message.Chat.Id, message, user);
                 break;
         }
 
         _usersRepository.SetUser(message.Chat.Id, user);
+    }
+
+    private async Task<UserModel> ProcessUserMessage(
+        ITelegramBotClient botClient,
+        long chatId,
+        Message message,
+        UserModel user,
+        Func<Task<UserModel>> onSeccess,
+        Func<Task> onFail,
+        Func<Task<bool>> predicate)
+    {
+        if (await predicate())
+        {
+            return await onSeccess();
+        }
+        else if (message.Text != null)
+        {
+            var aiResponse = await _openAIService.AnswerAsInsuranceAgent(message.Text);
+
+            await botClient.SendTextMessageAsync(chatId, aiResponse);
+        }
+        await onFail();
+
+        return user;
+    }
+
+    private async Task<UserModel> AnswerFromUserQuestion(ITelegramBotClient botClient, long chatId, Message message, UserModel user)
+    {
+
+        if (message.Text == null)
+        {
+            await botClient.SendTextMessageAsync(chatId, "Please, send me your question or /restart to restart");
+        }
+        else if (message.Text == "/restart")
+        {
+            user = await RequestUserPassport(botClient, message.Chat.Id, user);
+        }
+        else
+        {
+            var aiResponse = await _openAIService.AnswerAsInsuranceAgent(message.Text!);
+
+            await botClient.SendTextMessageAsync(chatId, aiResponse);
+
+            await botClient.SendTextMessageAsync(chatId, "Please, send me your question or /restart to restart");
+        }
+
+        return user;
     }
 
     private async Task<UserModel> RequestUserPassport(ITelegramBotClient botClient, long chatId, UserModel user)
@@ -205,18 +325,19 @@ public class BotService : IBotService
             using (var pdfAsStream = _documentService.GenerateDocument(insuranse))
 
             await botClient.SendDocumentAsync(chatId, new InputFileStream(pdfAsStream, "CarInsuranse.pdf"));
-            await botClient.SendTextMessageAsync(chatId,
-                "Thank you for using AutoPalBot! If you'd like to get one more insurance, just message me anything :)");
 
-            user.BotState = BotState.StartingConversation;
+            user.BotState = BotState.AwaitingForQuestion;
         }
         else
         {
             //TODO: move string to resources
             await botClient.SendTextMessageAsync(chatId, "We apologize, but the price is fixed at 100 USD.");
-
-            await RequestUserPassport(botClient, message.Chat.Id, user);
+            user.BotState = BotState.AwaitingForQuestion;
         }
+
+        await botClient.SendTextMessageAsync(
+            chatId,
+            "Thank you for using AutoPalBot! If you have any questions feel free to ask or send me /restart to restart:)");
 
         return user;
     }
